@@ -1,41 +1,88 @@
 import requests
 from bs4 import BeautifulSoup as BS
+import minor_category as MC
 # import fake_useragent
 # import selenium
 
+def do_soup(link):
+    response = requests.get(link).text
+    soup = BS(response, "lxml")
+    return soup
 
-LINK = "https://stalenergo-96.ru/produkcia/"
-response = requests.get(LINK).text
-soup = BS(response, "lxml").find("div", class_="catalogue_content").find_all("div", class_="catalogue__item")
+def found_catalogue__item_block(soup):
+    catalogue__item_block = soup.find("div", class_="catalogue_content").find_all("div", class_="catalogue__item")
+    return catalogue__item_block
 
-def major_category(html):
-    name = html.find("a", class_="catalogue__item_img").find("img").get("alt")
-    link = html.find("a", class_="catalogue__item_img").get("href")
+def found_catalogue__item_img(soup):
+    catalogue__item_img = soup.find("a", class_="catalogue__item_img")
+    return  catalogue__item_img
+
+def found_ul(soup):
+    try:
+        ul = soup.find("ul").find_all("a")
+    except AttributeError:
+        return None
+    return ul
+
+def get_one_category_html_block(soup_one_block):
+    catalogue__item_img = found_catalogue__item_img(soup_one_block)
+    return catalogue__item_img, found_ul(soup_one_block)
+
+def get_all_category_html_block(soup):
+    catalogue__item_block = found_catalogue__item_block(soup)
+    all_category_html_block = []
+    for i in catalogue__item_block:
+        all_category_html_block.append(get_one_category_html_block(i))
+    return all_category_html_block
+
+def get_major_category_data(category_html_block_0):
+    link = category_html_block_0.get("href")
+    name = category_html_block_0.find("img").get("alt")
     return name, link
 
-def minor_category(html):
-    name = html.find("a").getText()
-    link = html.find("a").get("href")
-    return name, link
+def get_subcategory_data(category_html_block_1):
+    sub_categories = []
+    try:
+        for sub in category_html_block_1:
+            link = sub.get("href")
+            name = sub.getText()
+            sub_categories.append((name, link))
+    except TypeError:
+        sub_categories.append(None)
+    return sub_categories
 
-def get_all_minor(html):
-    html_minor_categories = html.find("ul").find_all("li")
-    list_minor_categories = []
-    for cat in html_minor_categories:
-        list_minor_categories.append(minor_category(cat))
+def get_all_data(soup):
+    all_category_html_block = get_all_category_html_block(soup)
+    major_category_data = []
+    subcategory_data = []
+    for category_html_block in all_category_html_block:
+        major_category_data.append(get_major_category_data(category_html_block[0]))
+        subcategory_data.append(get_subcategory_data(category_html_block[1]))
+    return major_category_data, subcategory_data
 
-    return list_minor_categories
+def beautiful_output(cats_data_list):
+    for i in range(len(cats_data_list[0])):
+        print(*cats_data_list[0][i], end="\n\t")
+        print(*cats_data_list[1][i], sep="\n\t")
+        # break
+
+def subcategory_parse(all_data):
+    for cat_num in range(len(all_data)):
+        for subcat in all_data[1][cat_num]:
+            # print(subcat[1])
+            MC.main(subcat[1])
+            break
+        break
+
+def main():
+    LINK = "https://stalenergo-96.ru/produkcia/"
+    soup = do_soup(LINK)
+
+    all_data = get_all_data(soup)
+    subcategory_parse(all_data)
+
+    beautiful_output(all_data)
 
 
-id = 0
-for i in soup:
-    id += 1
-    print(id)
-
-    major = major_category(i)
-    print(major[0])
-    break_cats = ("Услуги и производство", "Мини АЗС", "Цементно-стружечная плита", "Шпунт Ларсена ГОСТ 4781-85")
-    if major[0] not in break_cats:
-        minor = get_all_minor(i)
-        print(*major, sep="\n\t")
-        print(*minor, sep='\n')
+if __name__ == "__main__":
+    main()
