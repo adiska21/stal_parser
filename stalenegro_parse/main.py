@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup as BS
 import minor_category as MC
 # import fake_useragent
 # import selenium
+import chardet
 
 def do_soup(link):
     response = requests.get(link).text
@@ -43,12 +44,12 @@ def get_major_category_data(category_html_block_0):
 def get_subcategory_data(category_html_block_1):
     sub_categories = []
     try:
-        for sub in category_html_block_1:
+        for sub in category_html_block_1[1]:
             link = sub.get("href")
             name = sub.getText()
             sub_categories.append((name, link))
     except TypeError:
-        sub_categories.append(None)
+        sub_categories.append(category_html_block_1[0].get("href"))
     return sub_categories
 
 def get_all_data(soup):
@@ -57,7 +58,7 @@ def get_all_data(soup):
     subcategory_data = []
     for category_html_block in all_category_html_block:
         major_category_data.append(get_major_category_data(category_html_block[0]))
-        subcategory_data.append(get_subcategory_data(category_html_block[1]))
+        subcategory_data.append(get_subcategory_data(category_html_block))
     return major_category_data, subcategory_data
 
 def beautiful_output(cats_data_list):
@@ -67,21 +68,35 @@ def beautiful_output(cats_data_list):
         # break
 
 def subcategory_parse(all_data):
-    for cat_num in range(len(all_data)):
+    ban_links = "".join(open("special_pages.txt", "r").readlines())
+    # print(ban_links)
+
+    all_sub_sub_categories_links = []
+
+    for cat_num in range(len(all_data[0])):
+        print(cat_num)
         for subcat in all_data[1][cat_num]:
-            # print(subcat[1])
-            MC.main(subcat[1])
-            break
-        break
+                print(subcat)
+                if isinstance(subcat, str) and subcat in ban_links:
+                    pass
+                else:
+                    # print(subcat[0]+"\n    "+subcat[1])
+                    # print("\t\t", end=" ")
+                    all_sub_sub_categories_links.append(MC.main(subcat))
+                break
+        # break
+    return all_sub_sub_categories_links
+
+
 
 def main():
     LINK = "https://stalenergo-96.ru/produkcia/"
     soup = do_soup(LINK)
 
     all_data = get_all_data(soup)
-    subcategory_parse(all_data)
-
-    beautiful_output(all_data)
+    with open("subsubcategories_links.txt", "a", encoding='utf-8-sig') as file:
+        file.write(str(subcategory_parse(all_data)))
+    # beautiful_output(all_data)
 
 
 if __name__ == "__main__":

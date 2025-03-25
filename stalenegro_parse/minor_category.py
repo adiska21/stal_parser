@@ -1,5 +1,5 @@
 import requests
-from bs4 import BeautifulSoup as BS, BeautifulSoup
+from bs4 import BeautifulSoup
 
 
 # import fake_useragent
@@ -31,11 +31,16 @@ def get_all_major_name_and_link(soup):
     return all_major_name_and_link
 
 def main(link):
-    soup = do_soup(link)
-    catalogue_content = found_catalogue_content_block(soup)
+    soup = do_soup(link[1])
+    try:
+        catalogue_content = found_catalogue_content_block(soup)
+    except AttributeError:
+        # print("#####################There is not any subcategories")
+        return link[0], link[1]
 
     all_major_name_and_link = get_all_major_name_and_link(catalogue_content)
-    print(*all_major_name_and_link, sep="\n")
+    # print(*all_major_name_and_link, sep="\n\t\t")
+    return all_major_name_and_link
 
 
 if __name__ == "__main__":
